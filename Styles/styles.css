@@ -1,0 +1,62 @@
+#board tr td
+{
+  padding: 0%;
+  background-color: #fff;
+}
+
+#board tr:nth-child(even) td:nth-child(odd),
+#board tr:nth-child(odd) td:nth-child(even)
+{
+  background-color: #ccc;
+}
+.container-fluid {
+  padding: 5%;
+}
+.square {
+  border: 2px solid grey;
+  width: 12.5%;
+  margin: 0%;
+  padding: 0%;
+}
+.piece {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+}
+.white.Pawn {
+  background-image: url('../Images/WhitePawn.png');
+}
+.black.Pawn {
+  background-image: url('../Images/BlackPawn.png');
+}
+.white.Knight {
+  background-image: url('../Images/WhiteKnight.png');
+}
+.black.Knight {
+  background-image: url('../Images/BlackKnight.png');
+}
+.white.Bishop {
+  background-image: url('../Images/WhiteBishop.png');
+}
+.black.Bishop {
+  background-image: url('../Images/BlackBishop.png');
+}
+.white.Rook {
+  background-image: url('../Images/WhiteRook.png');
+}
+.black.Rook {
+  background-image: url('../Images/BlackRook.png');
+}
+.white.Queen {
+  background-image: url('../Images/WhiteQueen.png');
+}
+.black.Queen {
+  background-image: url('../Images/BlackQueen.png');
+}
+.white.King {
+  background-image: url('../Images/WhiteKing.png');
+}
+.black.King {
+  background-image: url('../Images/BlackKing.png');
+}
