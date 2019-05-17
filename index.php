@@ -67,38 +67,21 @@
         this.colour = colour;
       }
       async playMove() {
-        let submitted = false;
+        let move;
         $('#submit').click(function(event) {
           event.preventDefault();
-          submitted = true;
-        });
-        let move;
-        async function check() {
-          if (submitted) {
-            let from = $('#from').val();
-            let to = $('#to').val();
-            console.log(from);
-            console.log(to);
-            if (from.val === "0-0") {
-              return KINGSIDE;
-            } else if (from.val === "0-0-0"){
-              return QUEENSIDE;
-            } else {
-              move = {from: {row: from[1] - 1, col: from[0].charCodeAt() - "a".charCodeAt()},
-                      to: {row: to[1] - 1, col: to[0].charCodeAt() - "a".charCodeAt()}};
-              console.log(move);
-            }
+          let from = $('#from').val();
+          let to = $('#to').val();
+          if (from.val === "0-0") {
+            return KINGSIDE;
+          } else if (from.val === "0-0-0"){
+            return QUEENSIDE;
           } else {
-            console.log("wait for check");
-            await setTimeout(check, 100);
-            console.log("done waiting");
+            move = {from: {row: from[1] - 1, col: from[0].charCodeAt() - "a".charCodeAt()},
+                    to: {row: to[1] - 1, col: to[0].charCodeAt() - "a".charCodeAt()}};
           }
-        }
-        console.log("pre-check");
-        await check();
-        console.log("post-check");
-        console.log(move);
-        return move;
+          loop(move);
+        });
       }
     }
     class ComputerPlayer {
@@ -126,11 +109,10 @@
           }
         }
 
-        if (move === KINGSIDE || move === QUEENSIDE) {
-          return move;
-        } else {
-          return {from: {row: piece.pos.row, col:piece.pos.col}, to: move};
+        if (move !== KINGSIDE && move !== QUEENSIDE) {
+          move = {from: {row: piece.pos.row, col:piece.pos.col}, to: move};
         }
+        loop(move);
       }
     }
     </script>
@@ -142,58 +124,55 @@
     let colour = WHITE;
     setupBoardGUI();
     updateBoardGUI(game);
-    let players = [new ComputerPlayer(WHITE), new ComputerPlayer(BLACK)];
+    let players = [new HumanPlayer(WHITE), new ComputerPlayer(BLACK)];
     let index = 0;
+    players[index].playMove(game);
 
-    (async () => {
-      while (true) {
-        //alert(index);
-        let player = players[index];
-        let move = await player.playMove(game);
-
-        try {
-          if (move === KINGSIDE || move === QUEENSIDE) {
-              game.tryCastle(player.colour, move);
-          } else {
-              game.tryMove(move.from, move.to);
-          }
-        } catch (error) {
-          if (error instanceof InvalidMoveError) {
-            console.log(error.message);
-          } else {
-            throw error;
-          }
+    async function loop (move) {
+      try {
+        if (move === KINGSIDE || move === QUEENSIDE) {
+            game.tryCastle(player.colour, move);
+        } else {
+            game.tryMove(move.from, move.to);
         }
-        await updateBoardGUI(game);
-        await wait(1000);
-        if (game.isMate(oppositeColour(colour))) {
-          $('#result').html((colour === WHITE ? "white" : "black") + " wins!");
-          //game.printMoves();
-          break;
+      } catch (error) {
+        if (error instanceof InvalidMoveError) {
+          console.log(error.message);
+        } else {
+          throw error;
         }
-        if (game.isStalemate(oppositeColour(colour))) {
-          $('#result').html("Stalemate");
-          //game.printMoves();
-          break;
-        }
-        if (game.fiftyMoveDraw) {
-          $('#result').html("50 move draw");
-          //game.printMoves();
-          break;
-        }
-        if (game.isRepetition()) {
-          $('#result').html("repetition");
-          //game.printMoves();
-          break;
-        }
-        if (game.isInsufficientMaterial()) {
-          $('#result').html("insufficient material");
-          //game.printMoves();
-          break;
-        }
-        index = (index + 1) % 2;
       }
-    })();
+      await updateBoardGUI(game);
+      await wait(1000);
+      if (game.isMate(oppositeColour(colour))) {
+        $('#result').html((colour === WHITE ? "white" : "black") + " wins!");
+        //game.printMoves();
+        return;
+      }
+      if (game.isStalemate(oppositeColour(colour))) {
+        $('#result').html("Stalemate");
+        //game.printMoves();
+        return;
+      }
+      if (game.fiftyMoveDraw) {
+        $('#result').html("50 move draw");
+        //game.printMoves();
+        return;
+      }
+      if (game.isRepetition()) {
+        $('#result').html("repetition");
+        //game.printMoves();
+        return;
+      }
+      if (game.isInsufficientMaterial()) {
+        $('#result').html("insufficient material");
+        //game.printMoves();
+        return;
+      }
+
+      index = (index + 1) % 2;
+      players[index].playMove(game);
+    }
     </script>
   </body>
 </html>
