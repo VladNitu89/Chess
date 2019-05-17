@@ -677,6 +677,18 @@ class Game {
         this.transpositionTable = [];
         this.transpositionTable[this.generateFEN()] = 1;
     }
+    print() {
+        for (let i = this.board.length - 1; i >= 0; i--) {
+            let str = "";
+            for (let cell of this.board[i]) {
+                str += (cell === null ? "__" : (cell.colour === WHITE ? "w" : "b") +
+                        (cell instanceof Knight ? "N" : cell.constructor.name[0]));
+                str += " ";
+            }
+            console.log(str);
+        }
+        console.log();
+    }
     moveToString(move) {
         if (move === QUEENSIDE) {
             return "0-0-0";

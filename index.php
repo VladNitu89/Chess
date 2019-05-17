@@ -18,6 +18,14 @@
         <table class="table table-bordered col-12 col-md-8 col-lg-4" id="board"></table>
       </div>
       <span id="result"></span>
+      <form method="post">
+        <label for="from">From:</label>
+        <input type="text" name="from" id="from">
+        <label for="to">To:</label>
+        <input type="text" name="to" id="to">
+        <br>
+        <input type="button" name="submit" id="submit" value="Submit">
+      </form>
     </div>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
     integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
@@ -42,12 +50,12 @@
       });
     }
     function updateBoardGUI(game) {
+      game.print();
       for (let i = game.board.length - 1; i >= 0; i--) {
         for (let j = 0; j < game.board.length; j++) {
           let cell = game.board[i][j];
-          if (cell === null) {
-            $(`.row${i}.col${j}`).empty();
-          } else {
+          $(`.row${i}.col${j}`).empty();
+          if (cell !== null) {
             let piece = `<div class="piece ${(cell.colour === WHITE ? "white" : "black")} ${cell.constructor.name}"></div>`
             $(`.row${i}.col${j}`).append(piece);
           }
@@ -55,15 +63,50 @@
       }
     }
     class HumanPlayer {
-      constructor() {}
-      playMove() {
-
+      constructor(colour) {
+        this.colour = colour;
+      }
+      async playMove() {
+        let submitted = false;
+        $('#submit').click(function(event) {
+          event.preventDefault();
+          submitted = true;
+        });
+        let move;
+        async function check() {
+          if (submitted) {
+            let from = $('#from').val();
+            let to = $('#to').val();
+            console.log(from);
+            console.log(to);
+            if (from.val === "0-0") {
+              return KINGSIDE;
+            } else if (from.val === "0-0-0"){
+              return QUEENSIDE;
+            } else {
+              move = {from: {row: from[1] - 1, col: from[0].charCodeAt() - "a".charCodeAt()},
+                      to: {row: to[1] - 1, col: to[0].charCodeAt() - "a".charCodeAt()}};
+              console.log(move);
+            }
+          } else {
+            console.log("wait for check");
+            await setTimeout(check, 100);
+            console.log("done waiting");
+          }
+        }
+        console.log("pre-check");
+        await check();
+        console.log("post-check");
+        console.log(move);
+        return move;
       }
     }
     class ComputerPlayer {
-      constructor() {}
-      playMoves(game) {
-        let playerPieces = game.pieces[colour];
+      constructor(colour) {
+        this.colour = colour;
+      }
+      async playMove(game) {
+        let playerPieces = game.pieces[this.colour];
         let piece, moves, move, from, to;
 
         while (true) {
@@ -82,81 +125,75 @@
               break;
           }
         }
+
+        if (move === KINGSIDE || move === QUEENSIDE) {
+          return move;
+        } else {
+          return {from: {row: piece.pos.row, col:piece.pos.col}, to: move};
+        }
       }
-      return move;
     }
     </script>
     <script>
+    function wait(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
     let game = new Game();
     let colour = WHITE;
     setupBoardGUI();
+    updateBoardGUI(game);
+    let players = [new ComputerPlayer(WHITE), new ComputerPlayer(BLACK)];
+    let index = 0;
 
-    while (true) {
-      let playerPieces = game.pieces[colour];
-      let piece, moves, move, from, to;
-
+    (async () => {
       while (true) {
-        let king = playerPieces.find(piece => piece instanceof King);
-        moves = king.possibleMoves();
-        let castle = moves.find(moves => move === QUEENSIDE || moves === KINGSIDE);
-        if (castle !== undefined) {
-            move = castle;
-            break;
-        }
-        piece = playerPieces[Math.floor(Math.random() * playerPieces.length)];
-        moves = piece.possibleMoves();
+        //alert(index);
+        let player = players[index];
+        let move = await player.playMove(game);
 
-        if (moves.length > 0) {
-            move = moves[Math.floor(Math.random() * moves.length)];
-            break;
+        try {
+          if (move === KINGSIDE || move === QUEENSIDE) {
+              game.tryCastle(player.colour, move);
+          } else {
+              game.tryMove(move.from, move.to);
+          }
+        } catch (error) {
+          if (error instanceof InvalidMoveError) {
+            console.log(error.message);
+          } else {
+            throw error;
+          }
         }
-      }
-
-      try {
-        if (move === KINGSIDE || move === QUEENSIDE) {
-            game.tryCastle(colour, move);
-        } else {
-            game.tryMove(piece.pos, move);
+        await updateBoardGUI(game);
+        await wait(1000);
+        if (game.isMate(oppositeColour(colour))) {
+          $('#result').html((colour === WHITE ? "white" : "black") + " wins!");
+          //game.printMoves();
+          break;
         }
-      } catch (error) {
-        if (error instanceof InvalidMoveError) {
-          console.log(error.message);
-        } else {
-          throw error;
+        if (game.isStalemate(oppositeColour(colour))) {
+          $('#result').html("Stalemate");
+          //game.printMoves();
+          break;
         }
+        if (game.fiftyMoveDraw) {
+          $('#result').html("50 move draw");
+          //game.printMoves();
+          break;
+        }
+        if (game.isRepetition()) {
+          $('#result').html("repetition");
+          //game.printMoves();
+          break;
+        }
+        if (game.isInsufficientMaterial()) {
+          $('#result').html("insufficient material");
+          //game.printMoves();
+          break;
+        }
+        index = (index + 1) % 2;
       }
-      if (game.isMate(oppositeColour(colour))) {
-        updateBoardGUI(game);
-        $('#result').html((colour === WHITE ? "white" : "black") + " wins!");
-        //game.printMoves();
-        break;
-      }
-      if (game.isStalemate(oppositeColour(colour))) {
-        updateBoardGUI(game);
-        $('#result').html("Stalemate");
-        //game.printMoves();
-        break;
-      }
-      if (game.fiftyMoveDraw) {
-        updateBoardGUI(game);
-        $('#result').html("50 move draw");
-        //game.printMoves();
-        break;
-      }
-      if (game.isRepetition()) {
-        updateBoardGUI(game);
-        $('#result').html("repetition");
-        //game.printMoves();
-        break;
-      }
-      if (game.isInsufficientMaterial()) {
-        updateBoardGUI(game);
-        $('#result').html("insufficient material");
-        //game.printMoves();
-        break;
-      }
-      colour = oppositeColour(colour);
-    }
+    })();
     </script>
   </body>
 </html>
