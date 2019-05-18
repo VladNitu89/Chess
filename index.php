@@ -18,14 +18,6 @@
         <table class="table table-bordered col-12 col-md-8 col-lg-4" id="board"></table>
       </div>
       <span id="result"></span>
-      <form method="post">
-        <label for="from">From:</label>
-        <input type="text" name="from" id="from">
-        <label for="to">To:</label>
-        <input type="text" name="to" id="to">
-        <br>
-        <input type="button" name="submit" id="submit" value="Submit">
-      </form>
     </div>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
     integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
@@ -40,7 +32,7 @@
       for (let i = 7; i >= 0; i--) {
         board += '<tr class="d-flex">';
         for (let j = 0; j < 8; j++) {
-          board += `<td class="square row${i} col${j}"></td>`;
+          board += `<td class="square" data-row="${i}" data-col="${j}" onclick="squareClicked(this)"></td>`;
         }
         board += "</tr>";
       }
@@ -54,19 +46,31 @@
       for (let i = game.board.length - 1; i >= 0; i--) {
         for (let j = 0; j < game.board.length; j++) {
           let cell = game.board[i][j];
-          $(`.row${i}.col${j}`).empty();
+          let square = $(`[data-row='${i}'][data-col='${j}']`);
+          square.empty();
           if (cell !== null) {
             let piece = `<div class="piece ${(cell.colour === WHITE ? "white" : "black")} ${cell.constructor.name}"></div>`
-            $(`.row${i}.col${j}`).append(piece);
+            square.append(piece);
           }
         }
+      }
+    }
+    let origin = null;
+    function squareClicked(identifier) {
+      let row = $(identifier).data('row');
+      let col = $(identifier).data('col');
+      if (origin !== null) {
+        executeMove({from: origin, to: {row: row, col: col}});
+        origin = null;
+      } else {
+        origin = {row: row, col: col};
       }
     }
     class HumanPlayer {
       constructor(colour) {
         this.colour = colour;
       }
-      async playMove() {
+      async selectMove() {
         let move;
         $('#submit').click(function(event) {
           event.preventDefault();
@@ -80,7 +84,7 @@
             move = {from: {row: from[1] - 1, col: from[0].charCodeAt() - "a".charCodeAt()},
                     to: {row: to[1] - 1, col: to[0].charCodeAt() - "a".charCodeAt()}};
           }
-          loop(move);
+          executeMove(move);
         });
       }
     }
@@ -88,7 +92,7 @@
       constructor(colour) {
         this.colour = colour;
       }
-      async playMove(game) {
+      async selectMove(game) {
         let playerPieces = game.pieces[this.colour];
         let piece, moves, move, from, to;
 
@@ -112,7 +116,7 @@
         if (move !== KINGSIDE && move !== QUEENSIDE) {
           move = {from: {row: piece.pos.row, col:piece.pos.col}, to: move};
         }
-        loop(move);
+        executeMove(move);
       }
     }
     </script>
@@ -126,9 +130,9 @@
     updateBoardGUI(game);
     let players = [new HumanPlayer(WHITE), new ComputerPlayer(BLACK)];
     let index = 0;
-    players[index].playMove(game);
+    players[index].selectMove(game);
 
-    async function loop (move) {
+    async function executeMove (move) {
       try {
         if (move === KINGSIDE || move === QUEENSIDE) {
             game.tryCastle(player.colour, move);
@@ -137,7 +141,8 @@
         }
       } catch (error) {
         if (error instanceof InvalidMoveError) {
-          console.log(error.message);
+          players[index].selectMove(game);
+          return;
         } else {
           throw error;
         }
@@ -171,7 +176,7 @@
       }
 
       index = (index + 1) % 2;
-      players[index].playMove(game);
+      players[index].selectMove(game);
     }
     </script>
   </body>
